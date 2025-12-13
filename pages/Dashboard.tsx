@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Appointment, User, PageView, Testimonial, Schedule } from '../types';
 import { PROCEDURES, DEFAULT_TIME_SLOTS } from '../services/mockData';
 import { sendAppointmentReminder } from '../services/notificationService';
-import { Calendar, Clock, FileText, AlertCircle, Phone, User as UserIcon, CheckCircle, XCircle, Trash2, Edit, Save, X, Bell, Send, Lock, Star, MessageCircle, Settings, Coffee } from 'lucide-react';
+import { Calendar, Clock, FileText, AlertCircle, Phone, User as UserIcon, CheckCircle, XCircle, Trash2, Edit, Save, X, Bell, Send, Lock, Star, MessageCircle, Settings, Coffee, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
@@ -24,7 +24,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [lastSaved, setLastSaved] = useState<number | null>(null);
 
-  // Schedule State
+  // Schedule State - Timeline
   const [selectedDateForSchedule, setSelectedDateForSchedule] = useState<string>(new Date().toISOString().split('T')[0]);
   
   const formatDate = (isoDate: string) => {
@@ -94,12 +94,35 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
   // --- Schedule Logic ---
   const defaultSlots = DEFAULT_TIME_SLOTS;
 
+  // Generate next 14 days
+  const getTimelineDays = () => {
+      const days = [];
+      const today = new Date();
+      for (let i = 0; i < 14; i++) {
+          const d = new Date(today);
+          d.setDate(today.getDate() + i);
+          days.push(d);
+      }
+      return days;
+  };
+  
+  const timelineDays = getTimelineDays();
+
   const getScheduleForDate = (date: string) => {
-      return schedules.find(s => s.date === date && s.doctorId === user.id) || {
+      // Check if it's a Friday
+      const dayOfWeek = new Date(date).getDay();
+      const isFriday = dayOfWeek === 5;
+      
+      const existing = schedules.find(s => s.date === date && s.doctorId === user.id);
+      
+      if (existing) return existing;
+
+      // Default logic: Friday is off, others are open with default slots
+      return {
           doctorId: user.id,
           date: date,
-          availableSlots: defaultSlots,
-          isDayOff: false
+          availableSlots: isFriday ? [] : defaultSlots,
+          isDayOff: isFriday
       };
   };
 
@@ -263,46 +286,94 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
                 <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 p-8 animate-fade-in relative">
                     {/* Save Indicator */}
                     {lastSaved && (
-                        <div className="absolute top-8 left-8 bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-fade-in">
+                        <div className="absolute top-8 left-8 bg-teal-100 text-teal-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 animate-fade-in z-20">
                             <CheckCircle size={12} /> تم الحفظ
                         </div>
                     )}
                     
                     <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <Calendar size={24} className="text-teal-500" /> تحديد أوقات الدوام
+                        <Calendar size={24} className="text-teal-500" /> إدارة أيام العمل والساعات
                     </h2>
+
+                    {/* Timeline Strip */}
+                    <div className="mb-8 overflow-x-auto pb-4">
+                        <div className="flex gap-3 min-w-max px-1">
+                            {timelineDays.map((d, i) => {
+                                const isoDate = d.toISOString().split('T')[0];
+                                const isSelected = selectedDateForSchedule === isoDate;
+                                const sched = getScheduleForDate(isoDate);
+                                const isOff = sched.isDayOff;
+                                const isFriday = d.getDay() === 5;
+                                
+                                return (
+                                    <button 
+                                        key={i}
+                                        onClick={() => setSelectedDateForSchedule(isoDate)}
+                                        className={`
+                                            relative flex flex-col items-center justify-center p-4 rounded-2xl min-w-[80px] border-2 transition-all duration-200
+                                            ${isSelected 
+                                                ? 'border-teal-500 bg-teal-50 scale-105 shadow-md z-10' 
+                                                : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'
+                                            }
+                                        `}
+                                    >
+                                        <span className={`text-xs font-bold mb-1 ${isFriday ? 'text-red-500' : 'text-gray-500'}`}>
+                                            {d.toLocaleDateString('ar-EG', { weekday: 'short' })}
+                                        </span>
+                                        <span className={`text-lg font-bold mb-1 ${isSelected ? 'text-teal-800' : 'text-gray-800'}`}>
+                                            {d.getDate()}
+                                        </span>
+                                        {/* Status Dot */}
+                                        <div className={`w-2 h-2 rounded-full ${isOff ? 'bg-red-400' : 'bg-green-400'}`}></div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                     
-                    <div className="grid md:grid-cols-2 gap-10">
+                    <div className="grid md:grid-cols-2 gap-10 border-t pt-8 border-gray-100">
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">اختر التاريخ</label>
-                            <input 
-                                type="date" 
-                                value={selectedDateForSchedule} 
-                                onChange={(e) => setSelectedDateForSchedule(e.target.value)}
-                                className="w-full border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-teal-500 outline-none"
-                            />
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-bold text-gray-800">حالة اليوم المحدد: <span className="text-teal-600 dir-ltr">{new Date(selectedDateForSchedule).toLocaleDateString('en-GB')}</span></h3>
+                            </div>
                             
-                            <div className={`mt-8 p-6 rounded-2xl border transition-colors duration-300 ${currentSchedule.isDayOff ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+                            <div className={`p-6 rounded-2xl border transition-colors duration-300 ${currentSchedule.isDayOff ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
                                 <div className="flex justify-between items-center mb-4">
-                                    <span className="font-bold text-gray-800">حالة اليوم</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentSchedule.isDayOff ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                                            {currentSchedule.isDayOff ? <Coffee size={20}/> : <CheckCircle size={20}/>}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-gray-900">{currentSchedule.isDayOff ? 'إجازة / مغلق' : 'متاح للحجز'}</div>
+                                            <div className="text-xs text-gray-500">{new Date(selectedDateForSchedule).getDay() === 5 ? 'يوم الجمعة (عطلة رسمية)' : 'يوم عمل عادي'}</div>
+                                        </div>
+                                    </div>
                                     <button 
                                         onClick={toggleDayOff}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${currentSchedule.isDayOff ? 'bg-red-600 text-white shadow-md' : 'bg-green-600 text-white shadow-md'}`}
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm ${currentSchedule.isDayOff ? 'bg-white text-red-600 border border-red-200 hover:bg-red-50' : 'bg-white text-green-600 border border-green-200 hover:bg-green-50'}`}
                                     >
-                                        {currentSchedule.isDayOff ? <><Coffee size={16}/> إجازة / مغلق</> : <><CheckCircle size={16}/> دوام رسمي</>}
+                                        {currentSchedule.isDayOff ? 'فتح الحجز' : 'تعطيل اليوم'}
                                     </button>
                                 </div>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-gray-600 leading-relaxed">
                                     {currentSchedule.isDayOff 
-                                        ? "لقد قمت بتحديد هذا اليوم كإجازة. لن تظهر أي مواعيد متاحة للمرضى في هذا التاريخ."
-                                        : "العيادة مفتوحة لاستقبال المرضى. يمكنك تحديد الساعات المتاحة من القائمة المقابلة."}
+                                        ? "هذا اليوم مغلق حالياً. لن يتمكن المرضى من حجز مواعيد."
+                                        : "العيادة مفتوحة. يمكنك تخصيص الساعات المتاحة من القائمة."}
                                 </p>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-4">الساعات المتاحة للحجز</label>
-                            <div className={`grid grid-cols-2 gap-3 transition-opacity duration-300 ${currentSchedule.isDayOff ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
+                            <div className="flex justify-between items-end mb-4">
+                                <label className="block text-sm font-bold text-gray-700">الساعات المتاحة</label>
+                                {!currentSchedule.isDayOff && (
+                                    <span className="text-xs text-teal-600 bg-teal-50 px-2 py-1 rounded">
+                                        {currentSchedule.availableSlots.length} ساعات نشطة
+                                    </span>
+                                )}
+                            </div>
+                            
+                            <div className={`grid grid-cols-2 gap-3 transition-all duration-300 ${currentSchedule.isDayOff ? 'opacity-40 pointer-events-none grayscale' : 'opacity-100'}`}>
                                 {defaultSlots.map(slot => (
                                     <button
                                         key={slot}
@@ -310,16 +381,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
                                         className={`py-3 px-4 rounded-xl text-sm font-bold transition border-2 flex justify-between items-center ${
                                             currentSchedule.availableSlots.includes(slot)
                                                 ? 'bg-teal-50 border-teal-500 text-teal-700 shadow-sm'
-                                                : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
+                                                : 'bg-white border-gray-100 text-gray-400 hover:border-gray-300'
                                         }`}
                                     >
                                         <span dir="ltr">{slot}</span>
                                         {currentSchedule.availableSlots.includes(slot) && <CheckCircle size={16} className="text-teal-500" />}
                                     </button>
                                 ))}
-                            </div>
-                            <div className="mt-4 text-xs text-gray-400 text-center">
-                                * انقر على الوقت لإتاحته أو إلغاء إتاحته. التغييرات تحفظ تلقائياً.
                             </div>
                         </div>
                     </div>
@@ -407,7 +475,7 @@ const EditModal = ({ editingApt, setEditingApt, onSave, isDoctor }: { editingApt
         e.preventDefault();
         const dateInput = editingApt.date.split('T')[0];
         const dateObj = new Date(dateInput);
-        if (dateObj.getUTCDay() === 5) { setError('عذراً، العيادة مغلقة أيام الجمعة.'); return; }
+        if (dateObj.getDay() === 5) { setError('عذراً، العيادة مغلقة أيام الجمعة.'); return; }
         setError('');
         let finalApt = { ...editingApt };
         if (changeReason.trim()) {

@@ -1,10 +1,21 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
+// Helper to safely access env vars in both Vite and Node environments
+const getEnv = (key: string) => {
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    // @ts-ignore
+    return import.meta.env[key] || import.meta.env[`VITE_${key}`];
+  }
+  return '';
+};
+
 // Initialize Gemini Client
-// WARNING: In a production Next.js app, this should be a Server Action or API Route.
-// Since this is a client-side demo, we use the env variable directly.
 const getClient = () => {
-  const apiKey = process.env.API_KEY || ''; 
+  const apiKey = getEnv('API_KEY'); 
   return new GoogleGenAI({ apiKey });
 };
 

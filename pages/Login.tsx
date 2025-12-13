@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, LogIn, AlertCircle, Lock, Stethoscope, User, ShieldCheck } from 'lucide-react';
+import Logo from '../components/Logo';
 
 interface LoginProps {
   onPatientLogin: (phone: string) => void;
@@ -50,6 +51,15 @@ const Login: React.FC<LoginProps> = ({ onPatientLogin, onDoctorLogin, error }) =
     <div className="flex items-center justify-center min-h-[70vh] px-4 bg-slate-50">
       <div className="w-full max-w-md animate-fade-in">
         
+        {/* Branding */}
+        <div className="flex flex-col items-center justify-center mb-8 animate-slide-up">
+            <div className="bg-white p-4 rounded-full shadow-lg mb-4">
+                <Logo className="w-16 h-16" />
+            </div>
+            <h1 className="text-3xl font-extrabold text-teal-900">عيادة سما</h1>
+            <p className="text-teal-600 font-medium">بوابة الخدمات الإلكترونية</p>
+        </div>
+
         {/* Tabs Header */}
         <div className="bg-white rounded-t-2xl shadow-sm border-b border-gray-100 flex overflow-hidden">
             <button 
@@ -81,13 +91,8 @@ const Login: React.FC<LoginProps> = ({ onPatientLogin, onDoctorLogin, error }) =
             
             {/* Header Content based on Tab */}
             <div className="text-center mb-8">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                    activeTab === 'patient' ? 'bg-teal-100 text-teal-600' : 'bg-indigo-100 text-indigo-600'
-                }`}>
-                    {activeTab === 'patient' ? <Phone size={32} /> : <ShieldCheck size={32} />}
-                </div>
                 <h2 className="text-2xl font-bold text-gray-800">
-                    {activeTab === 'patient' ? 'مرحباً بك' : 'دخول الكادر الطبي'}
+                    {activeTab === 'patient' ? 'تسجيل دخول' : 'دخول الكادر الطبي'}
                 </h2>
                 <p className="text-gray-500 text-sm mt-2">
                     {activeTab === 'patient' 

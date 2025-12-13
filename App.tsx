@@ -478,7 +478,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-cairo text-gray-800">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-gray-800">
       <Navbar 
         setPage={setCurrentPage} 
         currentPage={currentPage} 
