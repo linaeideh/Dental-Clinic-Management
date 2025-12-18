@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { DEFAULT_TIME_SLOTS } from '../services/mockData';
-import { PageView, Schedule, Appointment, Procedure, Doctor } from '../types';
-import { sanity } from '../lib/sanity';
+import { DOCTORS, PROCEDURES, DEFAULT_TIME_SLOTS } from '../services/mockData';
+import { PageView, Schedule, Appointment } from '../types';
 import { Calendar as CalendarIcon, Clock, Check, FileText, AlertCircle } from 'lucide-react';
 
 interface BookingProps {
@@ -84,33 +83,46 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
   const getNextDays = () => {
     const dates = [];
     const today = new Date();
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 14; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
-        // Skip Friday (Day 5) unless it's explicitly set in schedule as working day (future improvement)
-        // For now, keep the friday check but allow overrides if we had that logic
-        if (d.getDay() !== 5) {
-            dates.push(d);
-        }
+        dates.push(d);
     }
-    return dates.slice(0, 6); 
+    return dates; 
+  };
+
+  // Helper to check if a day is effectively closed (Friday default, or Schedule says off)
+  const isDayClosed = (date: Date, doctorId: string | null) => {
+      if (!doctorId) return false;
+      const dateStr = date.toISOString().split('T')[0];
+      const isFriday = date.getDay() === 5;
+      
+      const schedule = schedules.find(s => s.date === dateStr && s.doctorId === doctorId);
+      
+      if (schedule) {
+          // Explicit schedule overrides default
+          return schedule.isDayOff;
+      }
+      
+      // Default: Friday is closed
+      return isFriday;
   };
 
   // Calculate available time slots for the selected date and doctor
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate || !selectedDoctor) return [];
 
+    const dateObj = new Date(selectedDate);
     const dateStr = selectedDate.split('T')[0];
-
-    // 1. Get Base Slots (from Schedule or Default)
-    const schedule = schedules.find(s => s.date === dateStr && s.doctorId === selectedDoctor);
     
-    // If schedule exists and is day off, return empty
-    if (schedule && schedule.isDayOff) return [];
+    // Check if day is closed
+    if (isDayClosed(dateObj, selectedDoctor)) return [];
 
-    const baseSlots = schedule 
+    // 1. Get Base Slots
+    const schedule = schedules.find(s => s.date === dateStr && s.doctorId === selectedDoctor);
+    const baseSlots = schedule && schedule.availableSlots.length > 0
         ? schedule.availableSlots 
-        : DEFAULT_TIME_SLOTS; // Default if no specific schedule set
+        : DEFAULT_TIME_SLOTS;
 
     // 2. Filter out slots taken by existing Confirmed/Pending appointments
     const takenSlots = existingAppointments
@@ -207,19 +219,33 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
 
             <h3 className="text-xl font-semibold mb-4">اختر التاريخ والوقت</h3>
             <div className="mb-6">
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                    {getNextDays().map((date, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => { setSelectedDate(date.toISOString()); setSelectedTime(null); }}
-                            className={`flex-shrink-0 px-4 py-3 rounded-lg border text-center min-w-[100px] transition ${
-                                selectedDate === date.toISOString() ? 'bg-teal-600 text-white border-teal-600' : 'border-gray-200 hover:bg-gray-50'
-                            }`}
-                        >
-                            <div className="text-xs opacity-70 mb-1">{date.toLocaleDateString('ar-EG', { weekday: 'long' })}</div>
-                            <div className="font-bold text-lg dir-ltr">{date.toLocaleDateString('en-GB')}</div>
-                        </button>
-                    ))}
+                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                    {getNextDays().map((date, idx) => {
+                        const isClosed = isDayClosed(date, selectedDoctor);
+                        const isSelected = selectedDate === date.toISOString();
+                        return (
+                            <button
+                                key={idx}
+                                disabled={isClosed}
+                                onClick={() => { setSelectedDate(date.toISOString()); setSelectedTime(null); }}
+                                className={`flex-shrink-0 px-4 py-3 rounded-lg border text-center min-w-[100px] transition relative ${
+                                    isSelected 
+                                        ? 'bg-teal-600 text-white border-teal-600 shadow-md' 
+                                        : isClosed 
+                                            ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-not-allowed opacity-70' 
+                                            : 'bg-white border-gray-200 hover:bg-teal-50 hover:border-teal-300'
+                                }`}
+                            >
+                                {isClosed && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 rounded-lg">
+                                        <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full font-bold border border-red-200">مغلق</span>
+                                    </div>
+                                )}
+                                <div className="text-xs opacity-70 mb-1">{date.toLocaleDateString('ar-EG', { weekday: 'long' })}</div>
+                                <div className="font-bold text-lg dir-ltr">{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'numeric' })}</div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
@@ -240,10 +266,12 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-red-50 border border-red-100 p-4 rounded-xl text-center text-red-600 flex flex-col items-center gap-2 animate-fade-in">
-                            <AlertCircle size={24} />
-                            <span>عذراً، لا توجد مواعيد متاحة في هذا اليوم.</span>
-                            <span className="text-xs text-red-400">قد يكون الطبيب في إجازة أو جميع المواعيد محجوزة.</span>
+                        <div className="bg-orange-50 border border-orange-100 p-6 rounded-xl text-center text-orange-700 flex flex-col items-center gap-3 animate-fade-in">
+                            <CalendarX size={32} className="opacity-50"/>
+                            <div>
+                                <div className="font-bold">جميع المواعيد محجوزة</div>
+                                <div className="text-sm opacity-80 mt-1">يرجى اختيار يوم آخر</div>
+                            </div>
                         </div>
                     )}
                 </div>

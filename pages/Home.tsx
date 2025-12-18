@@ -1,6 +1,6 @@
 import React from 'react';
 import { PageView, Testimonial } from '../types';
-import { ArrowLeft, Clock, ShieldCheck, Users, Sparkles, Star, Quote, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Clock, ShieldCheck, Users, Sparkles, Star, Quote, ChevronRight, Zap, Smile, Gem } from 'lucide-react';
 
 interface HomeProps {
   setPage: (page: PageView) => void;
@@ -116,13 +116,15 @@ const Home: React.FC<HomeProps> = ({ setPage, testimonials = [] }) => {
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                  {[
-                     { title: 'زراعة الأسنان', icon: '🦷', desc: 'حلول دائمة لتعويض الأسنان المفقودة.' },
-                     { title: 'تجميل وابتسامة', icon: '✨', desc: 'فينير، تبييض، وتصميم الابتسامة.' },
-                     { title: 'علاج الجذور', icon: '⚡', desc: 'أحدث تقنيات سحب العصب بدون ألم.' },
-                     { title: 'تقويم الأسنان', icon: '😁', desc: 'تقويم شفاف ومعدني لجميع الأعمار.' },
+                     { title: 'زراعة الأسنان', icon: <Gem size={40} strokeWidth={1.5} />, desc: 'حلول دائمة لتعويض الأسنان المفقودة.' },
+                     { title: 'تجميل وابتسامة', icon: <Sparkles size={40} strokeWidth={1.5} />, desc: 'فينير، تبييض، وتصميم الابتسامة.' },
+                     { title: 'علاج الجذور', icon: <Zap size={40} strokeWidth={1.5} />, desc: 'أحدث تقنيات سحب العصب بدون ألم.' },
+                     { title: 'تقويم الأسنان', icon: <Smile size={40} strokeWidth={1.5} />, desc: 'تقويم شفاف ومعدني لجميع الأعمار.' },
                  ].map((service, i) => (
                      <div key={i} className="group p-8 bg-slate-50 rounded-3xl hover:bg-teal-500 transition duration-300 hover:shadow-xl cursor-pointer border border-slate-100 hover:border-teal-400" onClick={() => setPage(PageView.PROCEDURES)}>
-                         <div className="text-4xl mb-4 group-hover:scale-110 transition duration-300">{service.icon}</div>
+                         <div className="mb-6 text-teal-600 group-hover:text-white transition-transform duration-300 group-hover:scale-110 origin-right inline-block">
+                             {service.icon}
+                         </div>
                          <h3 className="text-xl font-bold text-slate-900 group-hover:text-white mb-2">{service.title}</h3>
                          <p className="text-slate-500 group-hover:text-teal-100 text-sm leading-relaxed">{service.desc}</p>
                      </div>
