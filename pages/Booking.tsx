@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { DOCTORS, PROCEDURES, DEFAULT_TIME_SLOTS } from '../services/mockData';
-import { PageView, Schedule, Appointment } from '../types';
+import { DEFAULT_TIME_SLOTS } from '../services/mockData';
+import { PageView, Schedule, Appointment, Procedure, Doctor } from '../types';
+import { sanity } from '../lib/sanity';
 import { Calendar as CalendarIcon, Clock, Check, FileText, AlertCircle } from 'lucide-react';
 
 interface BookingProps {
@@ -16,19 +17,68 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   
+  // Data State
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Patient & Service Details
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [selectedProcedure, setSelectedProcedure] = useState<string>('');
   const [notes, setNotes] = useState(''); 
-  
   const [loading, setLoading] = useState(false);
 
-  // Auto-select the doctor if there is only one
+  // Fetch Data (Doctors & Procedures)
   useEffect(() => {
-    if (DOCTORS.length === 1) {
-      setSelectedDoctor(DOCTORS[0].id);
-    }
+    const fetchData = async () => {
+      try {
+        setLoadingData(true);
+        
+        // Fetch Procedures
+        const proceduresQuery = `*[_type == "procedure"]{
+          "id": _id,
+          title,
+          description,
+          category,
+          duration,
+          painLevel,
+          "imageUrl": coalesce(image.asset->url, imageUrl.asset->url),
+          steps,
+          postCare
+        }`;
+
+        // Fetch Doctors
+        const doctorsQuery = `*[_type == "doctor"]{
+          "id": _id,
+          name,
+          specialty,
+          "imageUrl": coalesce(image.asset->url, imageUrl.asset->url)
+        }`;
+
+        const [proceduresData, doctorsData] = await Promise.all([
+          sanity.fetch(proceduresQuery),
+          sanity.fetch(doctorsQuery)
+        ]);
+
+        setProcedures(proceduresData);
+        setDoctors(doctorsData);
+
+        // Auto-select doctor if only one exists
+        if (doctorsData.length === 1) {
+          setSelectedDoctor(doctorsData[0].id);
+        }
+
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setError("فشل في تحميل البيانات. يرجى المحاولة لاحقاً.");
+      } finally {
+        setLoadingData(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const getNextDays = () => {
@@ -102,7 +152,7 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
 
   const getProcedureName = (id: string) => {
       if (id === 'other') return 'أخرى / استشارة عامة';
-      const proc = PROCEDURES.find(p => p.id === id);
+      const proc = procedures.find(p => p.id === id);
       return proc ? proc.title : 'غير محدد';
   };
 
@@ -137,8 +187,8 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
         <div className="bg-white rounded-xl shadow p-6 animate-fade-in">
             <h3 className="text-xl font-semibold mb-4">الطبيب المسؤول</h3>
             <div className="grid grid-cols-1 mb-8">
-                {DOCTORS.map(doc => (
-                    <div 
+                {doctors.map(doc => (
+                    <div  
                         key={doc.id}
                         onClick={() => setSelectedDoctor(doc.id)}
                         className={`cursor-pointer border rounded-xl p-4 flex flex-row items-center gap-4 transition ${selectedDoctor === doc.id ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-200' : 'border-gray-200 hover:border-teal-300'}`}
@@ -253,7 +303,9 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
                       className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-teal-500 outline-none bg-white"
                   >
                       <option value="">اختر الخدمة المطلوبة</option>
-                      {PROCEDURES.map(proc => (
+                      {loadingData && <option disabled>جاري التحميل...</option>}
+                      {error && <option disabled>حدث خطأ في التحميل</option>}
+                      {procedures.map(proc => (
                           <option key={proc.id} value={proc.id}>{proc.title}</option>
                       ))}
                       {/* Added 'Other' option explicitly */}
@@ -283,7 +335,7 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
                   <div className="text-sm text-gray-600 flex flex-col gap-2 pt-2">
                       <div className="flex justify-between">
                           <span>الطبيب:</span>
-                          <span className="font-medium text-gray-900">{DOCTORS.find(d => d.id === selectedDoctor)?.name}</span>
+                          <span className="font-medium text-gray-900">{doctors.find(d => d.id === selectedDoctor)?.name}</span>
                       </div>
                       <div className="flex justify-between">
                           <span>التاريخ والوقت:</span>
@@ -322,7 +374,7 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">تم الحجز بنجاح!</h3>
               <p className="text-gray-600 mb-8">
-                  شكراً لك {patientName}. تم تأكيد موعدك مع {DOCTORS.find(d => d.id === selectedDoctor)?.name} يوم <span dir="ltr">{selectedDate ? formatDate(selectedDate) : ''}</span> الساعة {selectedTime}.
+                  شكراً لك {patientName}. تم تأكيد موعدك مع {doctors.find(d => d.id === selectedDoctor)?.name} يوم <span dir="ltr">{selectedDate ? formatDate(selectedDate) : ''}</span> الساعة {selectedTime}.
               </p>
               <div className="flex flex-col gap-3">
                   <button 

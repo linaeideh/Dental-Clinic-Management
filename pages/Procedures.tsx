@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { PROCEDURES } from '../services/mockData';
 import { PageView, Procedure } from '../types';
 import { Clock, Activity, ChevronLeft, ArrowRight } from 'lucide-react';
+import { sanity } from '../lib/sanity';
 
 interface ProceduresProps {
   setPage: (page: PageView) => void;
@@ -9,16 +9,51 @@ interface ProceduresProps {
 }
 
 const Procedures: React.FC<ProceduresProps> = ({ setPage, setSelectedProcedure }) => {
-  
+  const [procedures, setProcedures] = React.useState<Procedure[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
   // Scroll to top when page opens
   useEffect(() => {
     window.scrollTo(0, 0);
+
+    const fetchProcedures = async () => {
+      try {
+        const query = `*[_type == "procedure"]{
+          "id": _id,
+          title,
+          description,
+          category,
+          duration,
+          painLevel,
+          "imageUrl": coalesce(image.asset->url, imageUrl.asset->url),
+          videoUrl,
+          "steps": coalesce(steps, []),
+          "postCare": coalesce(postCare, [])
+        }`;
+        const data = await sanity.fetch(query);
+        setProcedures(data);
+      } catch (error) {
+        console.error("Error fetching procedures:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProcedures();
   }, []);
 
   const handleSelect = (proc: Procedure) => {
     setSelectedProcedure(proc);
     setPage(PageView.PROCEDURE_DETAIL);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-50 min-h-screen py-12 animate-fade-in">
@@ -31,7 +66,7 @@ const Procedures: React.FC<ProceduresProps> = ({ setPage, setSelectedProcedure }
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {PROCEDURES.map((proc, index) => (
+          {procedures.map((proc, index) => (
             <div 
                 key={proc.id} 
                 className="group bg-white rounded-[2rem] shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 flex flex-col h-full hover:-translate-y-2"
@@ -39,7 +74,9 @@ const Procedures: React.FC<ProceduresProps> = ({ setPage, setSelectedProcedure }
             >
               <div className="relative h-64 overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 opacity-60 group-hover:opacity-40 transition duration-500"></div>
-                  <img src={proc.imageUrl} alt={proc.title} className="w-full h-full object-cover transition duration-700 group-hover:scale-110" />
+                  {proc.imageUrl && (
+                    <img src={proc.imageUrl} alt={proc.title} className="w-full h-full object-cover transition duration-700 group-hover:scale-110" />
+                  )}
                   <div className="absolute bottom-4 right-4 z-20">
                       <span className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-lg backdrop-blur-md border border-white/20 text-white ${
                           proc.category === 'Surgery' ? 'bg-red-500/80' :
