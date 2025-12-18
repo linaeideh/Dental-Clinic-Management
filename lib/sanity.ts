@@ -1,4 +1,4 @@
-import { createClient } from 'next-sanity'
+import { createClient } from '@sanity/client'
 
 export const sanity = createClient({
   projectId: '2pahgjjk', // نفس المشروع الموجود عندك

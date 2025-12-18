@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DOCTORS, PROCEDURES, DEFAULT_TIME_SLOTS } from '../services/mockData';
-import { PageView, Schedule, Appointment } from '../types';
-import { Calendar as CalendarIcon, Clock, Check, FileText, AlertCircle } from 'lucide-react';
+import { PageView, Schedule, Appointment, Procedure, Doctor } from '../types';
+import { Calendar as CalendarIcon, Clock, Check, FileText, AlertCircle, CalendarX } from 'lucide-react';
+import { sanity } from '../lib/sanity';
 
 interface BookingProps {
   setPage: (page: PageView) => void;
