@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /login
+Disallow: /dashboard
+
+Sitemap: https://sama-dental.com/sitemap.xml
