@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Analytics } from "@vercel/analytics/react";
+import * as Sentry from '@sentry/react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -12,6 +13,20 @@ import Login from './pages/Login';
 import { PageView, Procedure, User, Appointment, Testimonial, Schedule } from './types';
 import { supabase } from './services/supabaseClient';
 import { MOCK_APPOINTMENTS, TESTIMONIALS as INITIAL_TESTIMONIALS } from './services/mockData';
+
+// Add this button component to your app to test Sentry's error tracking
+function ErrorButton() {
+  return (
+    <button
+      className="fixed bottom-4 left-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-red-700 transition-colors z-50 text-sm font-medium"
+      onClick={() => {
+        throw new Error('This is your first error!');
+      }}
+    >
+      Break the world
+    </button>
+  );
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageView>(PageView.HOME);
@@ -491,6 +506,7 @@ function App() {
         {renderPage()}
       </main>
       <Footer />
+      <ErrorButton />
       <Analytics />
     </div>
   );
