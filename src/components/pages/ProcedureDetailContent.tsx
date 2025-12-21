@@ -1,33 +1,34 @@
-import React, { useEffect } from 'react';
-import { Procedure, PageView } from '../types';
-import { ArrowRight, CheckCircle, PlayCircle, AlertCircle } from 'lucide-react';
+'use client'
 
-interface ProcedureDetailProps {
-  procedure: Procedure | null;
-  setPage: (page: PageView) => void;
+import React from 'react'
+import Image from 'next/image'
+import { ArrowRight, CheckCircle, PlayCircle, AlertCircle } from 'lucide-react'
+import { Procedure } from '@/types'
+import Link from 'next/link'
+
+interface ProcedureDetailContentProps {
+  procedure: Procedure
 }
 
-const ProcedureDetail: React.FC<ProcedureDetailProps> = ({ procedure, setPage }) => {
-  // Scroll to top when page opens
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  if (!procedure) return <div>Loading...</div>;
-
+const ProcedureDetailContent: React.FC<ProcedureDetailContentProps> = ({ procedure }) => {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <button 
-        onClick={() => setPage(PageView.PROCEDURES)}
+    <div className="max-w-4xl mx-auto px-4 py-8 animate-fade-in">
+      <Link 
+        href="/procedures"
         className="flex items-center text-gray-500 hover:text-teal-600 mb-6 transition"
       >
         <ArrowRight size={20} className="ml-2" /> العودة للقائمة
-      </button>
+      </Link>
 
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header Image/Video Placeholder */}
         <div className="relative h-64 md:h-96 bg-gray-200">
-             <img src={procedure.imageUrl} alt={procedure.title} className="w-full h-full object-cover" />
+             <Image 
+              src={procedure.imageUrl} 
+              alt={procedure.title} 
+              fill
+              className="object-cover" 
+             />
              <div className="absolute inset-0 bg-black/30 flex items-center justify-center cursor-pointer group">
                  <div className="bg-white/20 backdrop-blur-md p-4 rounded-full group-hover:bg-white/30 transition">
                      <PlayCircle size={64} className="text-white" />
@@ -93,17 +94,17 @@ const ProcedureDetail: React.FC<ProcedureDetailProps> = ({ procedure, setPage })
             </div>
 
             <div className="mt-10 flex justify-center">
-                <button 
-                    onClick={() => setPage(PageView.BOOKING)}
-                    className="bg-teal-600 text-white px-10 py-4 rounded-lg font-bold text-lg hover:bg-teal-700 transition shadow-lg w-full md:w-auto"
+                <Link 
+                    href="/booking"
+                    className="bg-teal-600 text-white px-10 py-4 rounded-lg font-bold text-lg hover:bg-teal-700 transition shadow-lg w-full md:w-auto text-center"
                 >
                     حجز موعد لهذا الإجراء
-                </button>
+                </Link>
             </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ProcedureDetail;
+export default ProcedureDetailContent

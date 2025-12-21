@@ -1,5 +1,7 @@
+'use client'
+
 import React, { useState, useRef } from 'react';
-import { analyzeDentalImage, chatWithAI } from '../services/geminiService';
+import { analyzeDentalImage, chatWithAI } from '@/services/geminiService';
 import { Camera, Send, Image as ImageIcon, Loader2, Sparkles, MessageSquare } from 'lucide-react';
 
 const AIDiagnosis: React.FC = () => {

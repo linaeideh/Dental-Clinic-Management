@@ -1,4 +1,4 @@
-import { Appointment } from '../types';
+import { Appointment } from '@/types';
 import { DOCTORS, PROCEDURES } from './mockData';
 
 export const sendAppointmentReminder = async (appointment: Appointment): Promise<{success: boolean, message: string}> => {

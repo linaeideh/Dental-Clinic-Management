@@ -1,5 +1,6 @@
 import React from 'react';
-import { PageView, Testimonial } from '../types';
+import Image from 'next/image';
+import { PageView, Testimonial } from '@/types';
 import { ArrowLeft, Clock, ShieldCheck, Users, Sparkles, Star, Quote, ChevronRight, Zap, Smile, Gem } from 'lucide-react';
 
 interface HomeProps {
@@ -17,12 +18,14 @@ const Home: React.FC<HomeProps> = ({ setPage, testimonials = [] }) => {
       {/* Hero Section */}
       <div className="relative min-h-[750px] flex items-center overflow-hidden bg-slate-900 rounded-b-[3rem] shadow-2xl mb-10">
         {/* Background Image with Overlay */}
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 text-gray-500">
             {/* Updated image to a Dental Office / Clinic interior */}
-            <img 
+            <Image 
                 src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&q=80&w=2000" 
                 alt="عيادة د. محمد" 
-                className="w-full h-full object-cover opacity-80" 
+                fill
+                priority
+                className="object-cover opacity-80" 
             />
             {/* Lighter gradient to ensure image is visible but text is still readable */}
             <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-transparent"></div>
@@ -62,8 +65,14 @@ const Home: React.FC<HomeProps> = ({ setPage, testimonials = [] }) => {
                 <div className="mt-12 flex items-center gap-8">
                     <div className="flex -space-x-4 space-x-reverse">
                          {[1,2,3,4].map(i => (
-                             <div key={i} className="w-12 h-12 rounded-full border-2 border-slate-900 overflow-hidden">
-                                 <img src={`https://i.pravatar.cc/150?img=${i + 10}`} alt="client" />
+                             <div key={i} className="w-12 h-12 rounded-full border-2 border-slate-900 overflow-hidden relative">
+                                 <Image 
+                                    src={`https://i.pravatar.cc/150?img=${i + 10}`} 
+                                    alt="client" 
+                                    width={48}
+                                    height={48}
+                                    className="object-cover"
+                                 />
                              </div>
                          ))}
                          <div className="w-12 h-12 rounded-full border-2 border-slate-900 bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
@@ -79,10 +88,15 @@ const Home: React.FC<HomeProps> = ({ setPage, testimonials = [] }) => {
             
             {/* Hero Image / Visual - Eye Catching Smile */}
             <div className="hidden md:block relative animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl shadow-teal-900/50 border border-white/10 group transform hover:scale-[1.02] transition duration-700">
+                <div className="relative rounded-[2.5rem] overflow-hidden shadow-2xl shadow-teal-900/50 border border-white/10 group transform hover:scale-[1.02] transition duration-700 aspect-[4/3]">
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent z-10"></div>
                     {/* New Eye-Catching Image: Smiling confident woman */}
-                    <img src="https://images.unsplash.com/photo-1616391182219-e080b4d1043a?auto=format&fit=crop&q=80&w=800" alt="Perfect Smile" className="w-full h-auto object-cover" />
+                    <Image 
+                        src="https://images.unsplash.com/photo-1616391182219-e080b4d1043a?auto=format&fit=crop&q=80&w=800" 
+                        alt="Perfect Smile" 
+                        fill
+                        className="object-cover" 
+                    />
                     
                     <div className="absolute bottom-8 right-8 left-8 z-20">
                          <div className="bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20 hover:bg-white/20 transition">
@@ -223,8 +237,13 @@ const Home: React.FC<HomeProps> = ({ setPage, testimonials = [] }) => {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-teal-600/20 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3"></div>
         
         <div className="max-w-7xl mx-auto px-4 relative z-10 flex flex-col md:flex-row items-center gap-16">
-            <div className="md:w-1/2">
-                <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800" alt="AI Tech" className="rounded-3xl shadow-2xl border border-white/10" />
+            <div className="md:w-1/2 aspect-video relative">
+                <Image 
+                    src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800" 
+                    alt="AI Tech" 
+                    fill
+                    className="rounded-3xl shadow-2xl border border-white/10 object-cover" 
+                />
             </div>
             <div className="md:w-1/2 text-right">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold mb-6 border border-purple-500/30">

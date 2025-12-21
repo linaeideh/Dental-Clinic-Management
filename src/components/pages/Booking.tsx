@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { DOCTORS, PROCEDURES, DEFAULT_TIME_SLOTS } from '../services/mockData';
-import { PageView, Schedule, Appointment, Procedure, Doctor } from '../types';
+import { DOCTORS, PROCEDURES, DEFAULT_TIME_SLOTS } from '@/services/mockData';
+import { PageView, Schedule, Appointment, Procedure, Doctor } from '@/types';
 import { Calendar as CalendarIcon, Clock, Check, FileText, AlertCircle, CalendarX } from 'lucide-react';
-import { sanity } from '../lib/sanity';
+import Image from 'next/image';
+import { client as sanity } from '@/lib/sanity';
 
 interface BookingProps {
   setPage: (page: PageView) => void;
@@ -206,7 +207,13 @@ const Booking: React.FC<BookingProps> = ({ setPage, addAppointment, schedules = 
                         onClick={() => setSelectedDoctor(doc.id)}
                         className={`cursor-pointer border rounded-xl p-4 flex flex-row items-center gap-4 transition ${selectedDoctor === doc.id ? 'border-teal-500 bg-teal-50 ring-2 ring-teal-200' : 'border-gray-200 hover:border-teal-300'}`}
                     >
-                        <img src={doc.imageUrl} alt={doc.name} className="w-20 h-20 rounded-full object-cover" />
+                        <Image 
+                            src={doc.imageUrl} 
+                            alt={doc.name} 
+                            width={80}
+                            height={80}
+                            className="rounded-full object-cover" 
+                        />
                         <div>
                            <div className="font-bold text-gray-800 text-lg">{doc.name}</div>
                            <div className="text-sm text-gray-500">{doc.specialty}</div>

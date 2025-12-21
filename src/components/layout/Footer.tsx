@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Phone, Mail, MapPin, Facebook, Twitter, Instagram } from 'lucide-react';
-import Logo from './Logo';
+import Logo from '../Logo';
 
 const Footer: React.FC = () => {
   return (
@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <div className="flex items-center gap-3 mb-4">
-                <div className="bg-white p-1 rounded-full">
+                <div className="bg-white p-1 rounded-full text-slate-900">
                     <Logo className="h-8 w-8" />
                 </div>
                 <h3 className="text-white text-lg font-bold">عيادة سما لطب الأسنان</h3>

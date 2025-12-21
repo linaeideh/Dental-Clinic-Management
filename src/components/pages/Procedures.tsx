@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { PageView, Procedure } from '../types';
+import { PageView, Procedure } from '@/types';
 import { Clock, Activity, ChevronLeft, ArrowRight } from 'lucide-react';
-import { sanity } from '../lib/sanity';
+import Image from 'next/image';
+import { client as sanity } from '@/lib/sanity';
 
 interface ProceduresProps {
   setPage: (page: PageView) => void;
@@ -75,7 +76,13 @@ const Procedures: React.FC<ProceduresProps> = ({ setPage, setSelectedProcedure }
               <div className="relative h-64 overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 opacity-60 group-hover:opacity-40 transition duration-500"></div>
                   {proc.imageUrl && (
-                    <img src={proc.imageUrl} alt={proc.title} className="w-full h-full object-cover transition duration-700 group-hover:scale-110" />
+                    <Image 
+                      src={proc.imageUrl} 
+                      alt={proc.title} 
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover transition duration-700 group-hover:scale-110" 
+                    />
                   )}
                   <div className="absolute bottom-4 right-4 z-20">
                       <span className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-lg backdrop-blur-md border border-white/20 text-white ${

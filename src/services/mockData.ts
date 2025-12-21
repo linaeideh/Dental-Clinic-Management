@@ -1,4 +1,4 @@
-import { Procedure, Doctor, Appointment, Testimonial } from '../types';
+import { Procedure, Doctor, Appointment, Testimonial } from '@/types';
 
 export const DEFAULT_TIME_SLOTS = [
   '10:00 صباحاً', '11:00 صباحاً', '12:00 مساءً', 

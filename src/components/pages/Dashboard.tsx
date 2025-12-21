@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Appointment, User, PageView, Testimonial, Schedule } from '../types';
-import { PROCEDURES, DEFAULT_TIME_SLOTS } from '../services/mockData';
-import { sendAppointmentReminder } from '../services/notificationService';
+import { Appointment, User, PageView, Testimonial, Schedule } from '@/types';
+import { PROCEDURES, DEFAULT_TIME_SLOTS } from '@/services/mockData';
+import { sendAppointmentReminder } from '@/services/notificationService';
 import { Calendar, Clock, FileText, AlertCircle, Phone, User as UserIcon, CheckCircle, XCircle, Trash2, Edit, Save, X, Bell, Send, Lock, Star, MessageCircle, Settings, Coffee, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DashboardProps {
