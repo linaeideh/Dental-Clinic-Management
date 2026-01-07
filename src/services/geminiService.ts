@@ -31,7 +31,7 @@ export const analyzeDentalImage = async (base64Image: string): Promise<string> =
         parts: [
           {
             inlineData: {
-              mimeType: 'image/jpeg', // Assuming jpeg for simplicity in this demo
+              mimeType: 'image/jpeg',
               data: base64Image,
             },
           },
@@ -50,15 +50,23 @@ export const analyzeDentalImage = async (base64Image: string): Promise<string> =
 
     return response.text || "لم أتمكن من تحليل الصورة. يرجى المحاولة مرة أخرى بصورة أوضح.";
   } catch (error) {
-    console.error("Gemini Analysis Error:", error);
-    return "حدث خطأ أثناء الاتصال بالمساعد الذكي. تأكد من مفتاح API.";
+    console.error("Gemini Analysis Error (Using Mock):", error);
+    // Mock Response
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate delay
+    return `⚠️ تنبيه: هذا تحليل افتراضي (لأن الخدمة غير متصلة).
+    
+    بناءً على الصورة (محاكاة):
+    1. المشاكل الظاهرة: يبدو أن هناك تصبغات سطحية وربما بداية جير بين الأسنان السفلية. اللثة تبدو وردية صحية بشكل عام.
+    2. الإجراء المقترح: جلسة تنظيف أسنان وتلميع لإزالة الرواسب.
+    3. نصيحة منزلية: استخدم خيط الأسنان يومياً قبل النوم، وفرشاة ناعمة.
+    
+    * هذا مجرد مثال للتوضيح ولا يمثل تحليلاً للصورة المرفقة فعلياً.`;
   }
 };
 
 export const chatWithAI = async (message: string, history: {role: 'user' | 'model', text: string}[]): Promise<string> => {
     const ai = getClient();
     
-    // Formatting history for context (simplified context window)
     const context = history.map(h => `${h.role === 'user' ? 'المريض' : 'المساعد'}: ${h.text}`).join('\n');
     const prompt = `
     أنت مساعد افتراضي لعيادة أسنان.
@@ -78,7 +86,8 @@ export const chatWithAI = async (message: string, history: {role: 'user' | 'mode
         });
         return response.text || "عذراً، لم أفهم السؤال.";
     } catch (error) {
-        console.error("Gemini Chat Error:", error);
-        return "واجهت مشكلة في الاتصال. يرجى المحاولة لاحقاً.";
+        console.error("Gemini Chat Error (Using Mock):", error);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        return "أهلاً بك! بما أنني غير متصل بالإنترنت حالياً بشكل كامل، لا يمكنني معالجة سؤالك بدقة. لكن بشكل عام، ننصحك دائماً بزيارة العيادة للفحص الدوري. يمكنك حجز موعد من الصفحة الرئيسية!";
     }
 }

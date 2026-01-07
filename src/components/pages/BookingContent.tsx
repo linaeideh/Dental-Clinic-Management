@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Calendar as CalendarIcon, Clock, Check, FileText, AlertCircle, CalendarX } from 'lucide-react'
-import { supabase } from '@/services/supabaseClient'
+import { appointmentService } from '@/services/appointmentService'
 import { DEFAULT_TIME_SLOTS } from '@/services/mockData'
 import { Schedule, Appointment, Procedure, Doctor } from '@/types'
 
@@ -33,42 +33,22 @@ const BookingContent: React.FC<BookingContentProps> = ({ initialDoctors, initial
   const [notes, setNotes] = useState('') 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Fetch Appointments and Schedules from Supabase
+  // Error UI State
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+
+  // Fetch Appointments and Schedules using Service (with Mock Fallback)
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsLoadingData(true)
-        const [aptRes, schRes] = await Promise.all([
-          supabase.from('appointments').select('*').neq('status', 'Cancelled'),
-          supabase.from('schedules').select('*')
+        const [fetchedApts, fetchedSchs] = await Promise.all([
+          appointmentService.fetchAppointments(),
+          selectedDoctor ? appointmentService.fetchSchedules(selectedDoctor) : Promise.resolve([])
         ])
 
-        if (aptRes.data) {
-          const mappedApts: Appointment[] = aptRes.data.map((item: any) => ({
-            id: item.id,
-            patientName: item.patient_name,
-            patientPhone: item.patient_phone,
-            doctorId: item.doctor_id,
-            date: item.date,
-            time: item.time,
-            procedureId: item.procedure_id,
-            notes: item.notes,
-            status: item.status,
-            reminderSent: item.reminder_sent
-          }))
-          setAppointments(mappedApts)
-        }
-
-        if (schRes.data) {
-          const mappedSchs: Schedule[] = schRes.data.map((item: any) => ({
-            id: item.id,
-            doctorId: item.doctor_id,
-            date: item.date,
-            availableSlots: item.available_slots || [],
-            isDayOff: item.is_day_off
-          }))
-          setSchedules(mappedSchs)
-        }
+        setAppointments(fetchedApts)
+        setSchedules(fetchedSchs)
       } catch (err) {
         console.error("Error fetching booking data:", err)
       } finally {
@@ -77,7 +57,7 @@ const BookingContent: React.FC<BookingContentProps> = ({ initialDoctors, initial
     }
 
     fetchData()
-  }, [])
+  }, [selectedDoctor]) // Refetch schedules when doctor changes
 
   const getNextDays = () => {
     const dates = []
@@ -129,40 +109,35 @@ const BookingContent: React.FC<BookingContentProps> = ({ initialDoctors, initial
     setIsSubmitting(true)
     try {
       // 1. Double check availability
-      const { data: conflicts } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('doctor_id', selectedDoctor)
-        .eq('date', selectedDate)
-        .eq('time', selectedTime)
-        .neq('status', 'Cancelled')
+      const isAvailable = await appointmentService.checkAvailability(selectedDoctor, selectedDate, selectedTime)
 
-      if (conflicts && conflicts.length > 0) {
-        alert('عذراً، يبدو أن هذا الموعد قد تم حجزه للتو. يرجى اختيار موعد آخر.')
-        router.refresh()
+      if (!isAvailable) {
+        setErrorMessage('عذراً، يبدو أن هذا الموعد قد تم حجزه للتو. يرجى اختيار موعد آخر.')
+        setShowErrorModal(true)
         setIsSubmitting(false)
         return
       }
 
       // 2. Submit booking
-      const { data, error } = await supabase.from('appointments').insert([{
-        patient_name: patientName,
-        patient_phone: patientPhone,
-        doctor_id: selectedDoctor,
+      const success = await appointmentService.createAppointment({
+        patientName,
+        patientPhone,
+        doctorId: selectedDoctor,
+        procedureId: selectedProcedure || 'other',
         date: selectedDate,
         time: selectedTime,
-        procedure_id: selectedProcedure || 'other',
         notes: notes,
-        status: 'Confirmed',
-        reminder_sent: false
-      }]).select()
+        status: 'Confirmed'
+      })
 
-      if (error) throw error
+      if (!success) throw new Error("Booking failed")
 
       setStep(3)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Booking failed:", err)
-      alert("حدث خطأ أثناء الحجز. يرجى المحاولة لاحقاً.")
+      const msg = err?.message || "حدث خطأ غير متوقع."
+      setErrorMessage(`حدث خطأ أثناء الحجز. يرجى المحاولة لاحقاً.\n(${msg})`)
+      setShowErrorModal(true)
     } finally {
       setIsSubmitting(false)
     }
@@ -190,7 +165,38 @@ const BookingContent: React.FC<BookingContentProps> = ({ initialDoctors, initial
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12 animate-fade-in">
+    <div className="max-w-3xl mx-auto px-4 py-12 animate-fade-in relative">
+      
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center relative animate-slide-up">
+            <button 
+                onClick={() => setShowErrorModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+            >
+                <AlertCircle size={24} />
+            </button>
+            
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CalendarX size={40} className="text-red-500" />
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 mb-2">عذراً، حدث خطأ</h3>
+            <p className="text-gray-600 mb-8 whitespace-pre-line leading-relaxed text-sm">
+                {errorMessage}
+            </p>
+            
+            <button 
+                onClick={() => setShowErrorModal(false)}
+                className="w-full bg-red-50 text-red-600 border border-red-100 py-3 rounded-xl font-bold hover:bg-red-100 transition"
+            >
+                إغلاق
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-gray-800 text-center">حجز موعد جديد</h2>
         <div className="flex items-center justify-center mt-6">
@@ -440,3 +446,4 @@ const BookingContent: React.FC<BookingContentProps> = ({ initialDoctors, initial
 }
 
 export default BookingContent
+

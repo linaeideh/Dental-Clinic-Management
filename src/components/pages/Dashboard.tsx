@@ -2,7 +2,12 @@ import React, { useState } from 'react';
 import { Appointment, User, PageView, Testimonial, Schedule } from '@/types';
 import { PROCEDURES, DEFAULT_TIME_SLOTS } from '@/services/mockData';
 import { sendAppointmentReminder } from '@/services/notificationService';
-import { Calendar, Clock, FileText, AlertCircle, Phone, User as UserIcon, CheckCircle, XCircle, Trash2, Edit, Save, X, Bell, Send, Lock, Star, MessageCircle, Settings, Coffee, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+    Calendar, Clock, FileText, AlertCircle, Phone, User as UserIcon, CheckCircle, 
+    XCircle, Trash2, Edit, Save, X, Bell, Send, Lock, Star, MessageCircle, 
+    Settings, Coffee, ChevronLeft, ChevronRight, LogOut, Filter, Users, CalendarCheck, Clock3 
+} from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 
 interface DashboardProps {
   user: User;
@@ -18,11 +23,26 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, updateAppointmentStatus, editAppointment, deleteAppointment, markReminderAsSent, addTestimonial, saveSchedule, schedules = [] }) => {
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'appointments' | 'schedule'>('appointments');
   const [editingApt, setEditingApt] = useState<Appointment | null>(null);
   const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [lastSaved, setLastSaved] = useState<number | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'All' | 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'>('All');
+  const [cancelModalId, setCancelModalId] = useState<string | null>(null);
+
+  // Check Connection on Mount
+  React.useEffect(() => {
+      const check = async () => {
+          const { appointmentService } = await import('@/services/appointmentService');
+          const status = await appointmentService.checkConnection();
+          setIsConnected(status);
+      };
+      check();
+  }, []);
+
 
   // Schedule State - Timeline
   const [selectedDateForSchedule, setSelectedDateForSchedule] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -34,8 +54,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
 
   const getProcedureName = (id: string) => {
       if (id === 'other') return 'استشارة عامة / أخرى';
+      // Try to find in mock data
       const proc = PROCEDURES.find(p => p.id === id);
-      return proc ? proc.title : id;
+      if (proc) return proc.title;
+      
+      // If not found and looks like a UUID or Sanity ID
+      if (id.length > 10) return 'إجراء طبي'; 
+      
+      return id;
   };
 
   const handleDelete = (id: string) => {
@@ -45,9 +71,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
   };
 
   const handlePatientCancel = (id: string) => {
-      const reason = window.prompt('هل أنت متأكد من رغبتك في إلغاء هذا الموعد؟\nيرجى ذكر السبب (اختياري) لحفظه في الملاحظات:');
-      if (reason === null) return;
+      setCancelModalId(id);
+  };
 
+  const confirmCancel = (reason: string) => {
+      if (!cancelModalId) return;
+      const id = cancelModalId;
+      
       const apt = appointments.find(a => a.id === id);
       if (editAppointment && apt) {
           const timestamp = new Date().toLocaleDateString('en-GB');
@@ -59,6 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
       } else {
           deleteAppointment?.(id);
       }
+      setCancelModalId(null);
   };
 
   const handleSaveEdit = (updatedApt: Appointment) => {
@@ -179,57 +210,132 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
 
   // --- DOCTOR VIEW ---
   if (user.role === 'doctor') {
-      const sortedAppointments = [...appointments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      const dueReminders = sortedAppointments.filter(a => isTomorrow(a.date) && a.status !== 'Cancelled' && a.status !== 'Completed' && !a.reminderSent);
+      let filteredAppointments = [...appointments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      // Filter Logic
+      if (filterStatus !== 'All') {
+          filteredAppointments = filteredAppointments.filter(a => a.status === filterStatus);
+      }
+
+      const dueReminders = appointments.filter(a => isTomorrow(a.date) && a.status !== 'Cancelled' && a.status !== 'Completed' && !a.reminderSent);
+      
+      const stats = {
+          today: appointments.filter(a => new Date(a.date).toDateString() === new Date().toDateString()).length,
+          pending: appointments.filter(a => a.status === 'Pending').length,
+          total: appointments.length
+      };
 
       return (
           <div className="max-w-7xl mx-auto px-4 py-8 relative animate-fade-in">
-              <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                  <div>
-                      <h1 className="text-3xl font-bold text-gray-900">لوحة الطبيب</h1>
-                      <p className="text-gray-500 mt-1">إدارة العيادة والمواعيد</p>
+             {/* Header with Logout */}
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center text-teal-600 font-bold text-xl">
+                          {user.name.charAt(0)}
+                      </div>
+                      <div>
+                          <h1 className="text-2xl font-bold text-gray-900">أهلاً دكتور {user.name}</h1>
+                          <div className="flex items-center gap-2 mt-1">
+                                {isConnected !== null && (
+                                    <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 ${isConnected ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-orange-500 animate-pulse'}`}></div>
+                                        {isConnected ? 'متصل' : 'غير متصل'}
+                                    </span>
+                                )}
+                                <span className="text-xs text-gray-400">|</span>
+                                <span className="text-xs text-gray-500">{new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                          </div>
+                      </div>
                   </div>
-                  <div className="flex gap-2">
-                      <button 
-                        onClick={() => setActiveTab('appointments')}
-                        className={`px-4 py-2 rounded-xl font-bold transition ${activeTab === 'appointments' ? 'bg-teal-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  <div className="flex gap-3">
+                       <button 
+                        onClick={() => setActiveTab('schedule')}
+                        className={`px-4 py-2.5 rounded-xl font-bold transition flex items-center gap-2 ${activeTab === 'schedule' ? 'bg-teal-600 text-white shadow-lg' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
                       >
-                          الحجوزات
+                          <Settings size={18} /> دوام العيادة
                       </button>
                       <button 
-                        onClick={() => setActiveTab('schedule')}
-                        className={`px-4 py-2 rounded-xl font-bold transition flex items-center gap-2 ${activeTab === 'schedule' ? 'bg-teal-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                        onClick={() => setActiveTab('appointments')}
+                        className={`px-4 py-2.5 rounded-xl font-bold transition flex items-center gap-2 ${activeTab === 'appointments' ? 'bg-teal-600 text-white shadow-lg' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
                       >
-                          <Settings size={18} /> إدارة الدوام
+                          <CalendarCheck size={18} /> الحجوزات
+                      </button>
+                      <button 
+                        onClick={logout}
+                        className="px-4 py-2.5 rounded-xl font-bold text-red-500 bg-red-50 hover:bg-red-100 transition flex items-center gap-2"
+                      >
+                          <LogOut size={18} /> خروج
                       </button>
                   </div>
               </div>
 
               {activeTab === 'appointments' ? (
                 <>
-                  {/* Reminders Section */}
-                  {dueReminders.length > 0 && (
-                      <div className="mb-8 bg-orange-50 border border-orange-200 rounded-2xl p-6">
-                          <h2 className="text-lg font-bold text-orange-800 mb-4 flex items-center gap-2">
-                              <Bell size={20} className="animate-pulse"/> تذكيرات مطلوبة (غداً)
-                          </h2>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {dueReminders.map(apt => (
-                                  <div key={apt.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between border border-orange-100">
-                                      <div>
-                                          <div className="font-bold text-gray-800">{apt.patientName}</div>
-                                          <div className="text-xs text-gray-500 mt-1" dir="ltr">{apt.time} - {formatDate(apt.date)}</div>
-                                          <div className="text-xs text-blue-600 mt-1">{getProcedureName(apt.procedureId)}</div>
-                                      </div>
-                                      <button onClick={() => handleSendReminder(apt)} disabled={sendingReminderId === apt.id} className="bg-orange-100 text-orange-700 px-3 py-2 rounded-lg text-sm font-bold hover:bg-orange-200 transition flex items-center gap-2">
-                                          {sendingReminderId === apt.id ? '...' : <Send size={14}/>}
-                                      </button>
-                                  </div>
-                              ))}
-                          </div>
-                      </div>
-                  )}
+                   {/* Top Section: Reminders & Stats */}
+                   <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+                       {/* Stats Cards */}
+                       <div className="lg:col-span-1 space-y-4">
+                           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                               <div>
+                                   <div className="text-gray-500 text-xs font-bold mb-1">مواعيد اليوم</div>
+                                   <div className="text-2xl font-bold text-gray-900">{stats.today}</div>
+                               </div>
+                               <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center"><Clock3 size={20}/></div>
+                           </div>
+                           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                               <div>
+                                   <div className="text-gray-500 text-xs font-bold mb-1">طلبات جديدة</div>
+                                   <div className="text-2xl font-bold text-gray-900">{stats.pending}</div>
+                               </div>
+                               <div className="w-10 h-10 rounded-full bg-yellow-50 text-yellow-500 flex items-center justify-center"><AlertCircle size={20}/></div>
+                           </div>
+                           <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                               <div>
+                                   <div className="text-gray-500 text-xs font-bold mb-1">إجمالي الحجوزات</div>
+                                   <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+                               </div>
+                               <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-500 flex items-center justify-center"><Users size={20}/></div>
+                           </div>
+                       </div>
 
+                       {/* Due Reminders */}
+                       <div className="lg:col-span-3 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                           <h2 className="text-lg font-bold text-orange-800 mb-4 flex items-center gap-2">
+                              <Bell size={20} className={dueReminders.length > 0 ? "animate-pulse" : ""}/> تذكيرات الغد
+                              {dueReminders.length > 0 && <span className="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full">{dueReminders.length}</span>}
+                           </h2>
+                           {dueReminders.length === 0 ? (
+                               <div className="text-center py-6 text-gray-400 text-sm bg-gray-50 rounded-xl border-dashed border-2 border-gray-200">
+                                   لا توجد تذكيرات مطلوبة ليوم غد
+                               </div>
+                           ) : (
+                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                   {dueReminders.map(apt => (
+                                     <div key={apt.id} className="bg-orange-50 p-3 rounded-xl border border-orange-100 flex items-center justify-between">
+                                          <div>
+                                              <div className="font-bold text-gray-800 text-sm">{apt.patientName}</div>
+                                              <div className="text-xs text-gray-500" dir="ltr">{apt.time}</div>
+                                          </div>
+                                          <button onClick={() => handleSendReminder(apt)} disabled={sendingReminderId === apt.id} className="bg-white text-orange-700 w-8 h-8 rounded-full shadow-sm flex items-center justify-center hover:bg-orange-100 transition">
+                                              {sendingReminderId === apt.id ? '...' : <Send size={14}/>}
+                                          </button>
+                                     </div>
+                                   ))}
+                               </div>
+                           )}
+                       </div>
+                   </div>
+
+                  {/* Filters */}
+                   <div className="flex flex-wrap gap-2 mb-6">
+                       <button onClick={() => setFilterStatus('All')} className={`px-4 py-2 rounded-full text-sm font-bold transition border ${filterStatus === 'All' ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>الكل</button>
+                       <button onClick={() => setFilterStatus('Confirmed')} className={`px-4 py-2 rounded-full text-sm font-bold transition border ${filterStatus === 'Confirmed' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>مؤكدة</button>
+                       <button onClick={() => setFilterStatus('Pending')} className={`px-4 py-2 rounded-full text-sm font-bold transition border ${filterStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>الانتظار</button>
+                       <button onClick={() => setFilterStatus('Completed')} className={`px-4 py-2 rounded-full text-sm font-bold transition border ${filterStatus === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>منجزة</button>
+                       <button onClick={() => setFilterStatus('Cancelled')} className={`px-4 py-2 rounded-full text-sm font-bold transition border ${filterStatus === 'Cancelled' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>ملغاة</button>
+                   </div>
+
+                  {/* Table */}
                   <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
                       <div className="overflow-x-auto">
                           <table className="w-full text-right">
@@ -244,10 +350,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
                                   </tr>
                               </thead>
                               <tbody className="divide-y divide-gray-100 text-sm">
-                                  {sortedAppointments.length === 0 ? (
-                                      <tr><td colSpan={6} className="p-12 text-center text-gray-400">لا توجد حجوزات في النظام</td></tr>
+                                  {filteredAppointments.length === 0 ? (
+                                      <tr><td colSpan={6} className="p-12 text-center text-gray-400">لا توجد حجوزات تطابق الفلتر المختار</td></tr>
                                   ) : (
-                                      sortedAppointments.map(apt => (
+                                      filteredAppointments.map(apt => (
                                           <tr key={apt.id} className="hover:bg-gray-50 transition group">
                                               <td className="p-5">
                                                   <div className="flex flex-col">
@@ -395,13 +501,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
               )}
               
               {editingApt && (
-                <EditModal editingApt={editingApt} setEditingApt={setEditingApt} onSave={handleSaveEdit} isDoctor={true} />
+                <EditModal editingApt={editingApt} setEditingApt={setEditingApt} onSave={handleSaveEdit} isDoctor={true} schedules={schedules} />
               )}
           </div>
       );
   }
 
-  // --- PATIENT VIEW (Unchanged basically, just kept tight) ---
+  // --- PATIENT VIEW ---
   const patientAppointments = appointments.filter(apt => apt.patientName === user.name || user.id === 'u_guest');
 
   return (
@@ -460,22 +566,43 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
               </div>
           </div>
       </div>
-      {editingApt && <EditModal editingApt={editingApt} setEditingApt={setEditingApt} onSave={handleSaveEdit} isDoctor={false} />}
+      {editingApt && <EditModal editingApt={editingApt} setEditingApt={setEditingApt} onSave={handleSaveEdit} isDoctor={false} schedules={schedules} />}
       {showReviewModal && <ReviewModal onClose={() => setShowReviewModal(false)} onSubmit={handleSubmitReview} />}
+      {cancelModalId && <CancelModal onClose={() => setCancelModalId(null)} onConfirm={confirmCancel} />}
     </div>
   );
 };
 
-// EditModal and ReviewModal components remain the same, just included to ensure file completeness if needed
-const EditModal = ({ editingApt, setEditingApt, onSave, isDoctor }: { editingApt: Appointment, setEditingApt: (apt: Appointment | null) => void, onSave: (apt: Appointment) => void, isDoctor: boolean }) => {
+// Updated EditModal
+const EditModal = ({ editingApt, setEditingApt, onSave, isDoctor, schedules = [] }: { editingApt: Appointment, setEditingApt: (apt: Appointment | null) => void, onSave: (apt: Appointment) => void, isDoctor: boolean, schedules?: Schedule[] }) => {
     const [error, setError] = useState('');
     const [changeReason, setChangeReason] = useState('');
 
+    const dateInput = editingApt.date.split('T')[0];
+
+    // Get available slots for the selected date
+    const availableSlots = React.useMemo(() => {
+        const schedule = schedules.find(s => s.date === dateInput && s.doctorId === editingApt.doctorId);
+        let slots = schedule && schedule.availableSlots.length > 0 ? schedule.availableSlots : DEFAULT_TIME_SLOTS;
+        
+        // Always include the current time of the appointment so it doesn't disappear if re-selected
+        if (!slots.includes(editingApt.time)) {
+            slots = [...slots, editingApt.time].sort(); // simple sort, strictly might need time sort
+        }
+        return slots;
+    }, [dateInput, editingApt.doctorId, editingApt.time, schedules]);
+
     const validateAndSave = (e: React.FormEvent) => {
         e.preventDefault();
-        const dateInput = editingApt.date.split('T')[0];
         const dateObj = new Date(dateInput);
         if (dateObj.getDay() === 5) { setError('عذراً، العيادة مغلقة أيام الجمعة.'); return; }
+        
+        // Basic slot validation
+        if (!availableSlots.includes(editingApt.time)) {
+             setError('هذا الوقت غير متاح في جدول الطبيب لهذا اليوم.');
+             return;
+        }
+
         setError('');
         let finalApt = { ...editingApt };
         if (changeReason.trim()) {
@@ -506,7 +633,15 @@ const EditModal = ({ editingApt, setEditingApt, onSave, isDoctor }: { editingApt
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">الوقت</label>
-                            <input type="text" value={editingApt.time} onChange={e => setEditingApt({...editingApt, time: e.target.value})} className="w-full border-gray-200 bg-gray-50 rounded-xl p-3 outline-none" />
+                            <select 
+                                value={editingApt.time} 
+                                onChange={e => setEditingApt({...editingApt, time: e.target.value})} 
+                                className="w-full border-gray-200 bg-gray-50 rounded-xl p-3 outline-none appearance-none"
+                            >
+                                {availableSlots.map(slot => (
+                                    <option key={slot} value={slot}>{slot}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                      {isDoctor && (
@@ -555,5 +690,34 @@ const ReviewModal = ({ onClose, onSubmit }: { onClose: () => void, onSubmit: (ra
         </div>
     );
 };
+
+const CancelModal = ({ onClose, onConfirm }: { onClose: () => void, onConfirm: (reason: string) => void }) => {
+    const [reason, setReason] = useState('');
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-slide-up">
+                <div className="bg-red-50 px-8 py-6 flex justify-between items-center border-b border-red-100">
+                    <h3 className="text-xl font-bold text-red-800 flex items-center gap-2"><AlertCircle size={20}/> تأكيد الإلغاء</h3>
+                    <button onClick={onClose} className="text-red-300 hover:text-red-500 transition"><X size={24}/></button>
+                </div>
+                <div className="p-8 space-y-4">
+                    <p className="text-gray-600 font-bold">هل أنت متأكد من رغبتك في إلغاء هذا الموعد؟</p>
+                    <p className="text-sm text-gray-500">يمكنك ذكر السبب (اختياري) لمساعدتنا في تحسين الخدمة:</p>
+                    <textarea 
+                        value={reason} 
+                        onChange={(e) => setReason(e.target.value)} 
+                        placeholder="سبب الإلغاء..." 
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 h-24 outline-none focus:ring-2 focus:ring-red-200"
+                    ></textarea>
+                    
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => onConfirm(reason)} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">تأكيد الإلغاء</button>
+                        <button onClick={onClose} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition">تراجع</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default Dashboard;

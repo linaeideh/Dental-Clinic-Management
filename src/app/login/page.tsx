@@ -24,12 +24,12 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const handlePatientLogin = (phone: string) => {
-    login({ id: phone, name: `مريض (${phone})`, role: 'patient' });
+  const handlePatientLogin = (phone: string, name?: string) => {
+    login({ id: phone, name: name || `مريض (${phone})`, role: 'patient' });
   };
 
   const handleDoctorLogin = () => {
-    login({ id: 'admin', name: 'جراح أسنان', role: 'admin' });
+    login({ id: 'd1', name: 'د. محمد', role: 'doctor' }); // Using 'd1' to match mock data for better testing
   };
 
   return (

@@ -13,8 +13,7 @@ export const metadata: Metadata = {
   description: "عيادة سما لطب وجراحة الأسنان",
 };
 
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import AppLayout from "@/components/layout/AppLayout";
 import { AuthProvider } from "@/lib/AuthContext";
 
 export default function RootLayout({
@@ -24,13 +23,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${tajawal.variable} font-tajawal antialiased min-h-screen flex flex-col pt-28`}>
+      <body className={`${tajawal.variable} font-tajawal antialiased min-h-screen flex flex-col`}>
         <AuthProvider>
-          <Navbar />
-          <main className="flex-grow">
+          <AppLayout>
             {children}
-          </main>
-          <Footer />
+          </AppLayout>
         </AuthProvider>
       </body>
     </html>
