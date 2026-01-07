@@ -274,7 +274,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
                    {/* Top Section: Reminders & Stats */}
                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
                        {/* Stats Cards */}
-                       <div className="lg:col-span-1 space-y-4">
+                       <div className="lg:col-span-1 grid grid-cols-2 lg:grid-cols-1 gap-4">
                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
                                <div>
                                    <div className="text-gray-500 text-xs font-bold mb-1">مواعيد اليوم</div>
@@ -335,8 +335,61 @@ const Dashboard: React.FC<DashboardProps> = ({ user, appointments, setPage, upda
                        <button onClick={() => setFilterStatus('Cancelled')} className={`px-4 py-2 rounded-full text-sm font-bold transition border ${filterStatus === 'Cancelled' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'}`}>ملغاة</button>
                    </div>
 
-                  {/* Table */}
-                  <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                  {/* Mobile Appointment Cards */}
+                  <div className="md:hidden space-y-4">
+                      {filteredAppointments.length === 0 ? (
+                          <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-2xl border-dashed border-2 border-gray-200">
+                             لا توجد حجوزات تطابق الفلتر المختار
+                          </div>
+                      ) : (
+                          filteredAppointments.map(apt => (
+                              <div key={apt.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
+                                  <div className="flex justify-between items-start">
+                                      <div>
+                                          <div className="font-bold text-gray-900 text-lg">{apt.patientName}</div>
+                                          {apt.patientPhone && <div className="text-sm text-gray-500 font-mono dir-ltr mt-1">{apt.patientPhone}</div>}
+                                      </div>
+                                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusBadgeClass(apt.status)}`}>{getStatusLabel(apt.status)}</span>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                      <div className="flex items-center gap-2">
+                                          <Calendar size={16} className="text-teal-500"/>
+                                          <span dir="ltr">{formatDate(apt.date)}</span>
+                                      </div>
+                                      <div className="w-px h-4 bg-gray-300"></div>
+                                      <div className="flex items-center gap-2">
+                                          <Clock size={16} className="text-teal-500"/>
+                                          <span dir="ltr">{apt.time}</span>
+                                      </div>
+                                  </div>
+
+                                  <div>
+                                      <div className="text-xs font-bold text-gray-500 mb-1">الخدمة:</div>
+                                      <span className="px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-xs font-bold border border-teal-100 inline-block">{getProcedureName(apt.procedureId)}</span>
+                                  </div>
+
+                                  {(apt.notes || apt.reminderSent) && (
+                                     <div className="bg-yellow-50 p-3 rounded-xl border border-yellow-100 text-sm">
+                                         {apt.notes && <p className="text-gray-700 mb-2">{apt.notes}</p>}
+                                         {apt.reminderSent && <span className="text-green-600 text-[10px] flex items-center gap-1 font-bold"><CheckCircle size={10} /> تم إرسال تذكير</span>}
+                                     </div>
+                                  )}
+
+                                  <div className="flex justify-end gap-2 border-t pt-4 mt-1 border-gray-100">
+                                      <button onClick={() => setEditingApt(apt)} className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-bold hover:bg-gray-200 transition flex items-center justify-center gap-2"><Edit size={16} /> تعديل</button>
+                                      {apt.status !== 'Completed' && apt.status !== 'Cancelled' && updateAppointmentStatus && (
+                                          <button onClick={() => updateAppointmentStatus(apt.id, 'Completed')} className="flex-1 bg-green-100 text-green-700 py-2 rounded-lg font-bold hover:bg-green-200 transition flex items-center justify-center gap-2"><CheckCircle size={16} /> إنجاز</button>
+                                      )}
+                                      <button onClick={() => handleDelete(apt.id)} className="w-10 bg-red-50 text-red-600 rounded-lg font-bold hover:bg-red-100 transition flex items-center justify-center"><Trash2 size={18} /></button>
+                                  </div>
+                              </div>
+                          ))
+                      )}
+                  </div>
+
+                  {/* Desktop Table */}
+                  <div className="hidden md:block bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
                       <div className="overflow-x-auto">
                           <table className="w-full text-right">
                               <thead className="bg-gray-50 text-gray-600 border-b border-gray-200 text-sm">
